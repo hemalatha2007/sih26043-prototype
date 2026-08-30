@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model University {
+  id        String    @id @default(cuid())
+  name      String
+  location  String
+  createdAt DateTime  @default(now())
+
+  faculty   Faculty[]
+  students  Student[]
+  matches   Match[]
+  problems  Problem[] @relation("RoutedProblems")
+}
+
+model Faculty {
+  id           String     @id @default(cuid())
+  name         String
+  role         String
+  skills       String[]
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  universityId String
+}
+
+model Student {
+  id           String     @id @default(cuid())
+  name         String
+  skills       String[]
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  universityId String
+}
+
+enum ProblemStatus {
+  SUBMITTED
+  ANALYZED
+  MATCHED
+  ROUTED
+  IN_PROGRESS
+  DONE
+}
+
+model Problem {
+  id            String        @id @default(cuid())
+  org           String
+  domain        String
+  description   String
+  status        ProblemStatus @default(SUBMITTED)
+  extractedTags String[]      @default([])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  routedTo      University?   @relation("RoutedProblems", fields: [routedToId], references: [id])
+  routedToId    String?
+
+  matches       Match[]
+  tasks         Task[]
+}
+
+model Match {
+  id           String     @id @default(cuid())
+  problem      Problem    @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  problemId    String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  universityId String
+  score        Int
+  breakdown    Json?
+  createdAt    DateTime   @default(now())
+
+  @@unique([problemId, universityId])
+}
+
+enum TaskColumn {
+  TODO
+  DOING
+  DONE
+}
+
+model Task {
+  id        String     @id @default(cuid())
+  problem   Problem    @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  problemId String
+  title     String
+  column    TaskColumn @default(TODO)
+  createdAt DateTime   @default(now())
+}
